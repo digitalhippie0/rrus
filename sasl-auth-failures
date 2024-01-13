@@ -31,7 +31,6 @@ IFS='
 '
 
 echo '# make sure, we have our ipsets ready'
-IPSETS_EXIST=$( ${IPSET_BIN} list | grep -E "^create ")
 for NETS in '' '-nets'; do
 	for IP6 in '' '-ipv6'; do
 		if ! ${IPSET_BIN} list "sasl-auth-failed${NETS}${IP6}" >/dev/null 2>&1; then
