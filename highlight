@@ -1,0 +1,81 @@
+#!/bin/bash
+# $Id: highlight,v 1.2 2011/09/19 10:20:52 sfws Exp $
+# Thu Aug  4 11:34:10 UTC 2011; HH-RIPE
+# Output colorizer to be used in a pipe
+#
+# you will need 'seq' from GNU coreutils
+# On a Mac, get it from Darwinports
+# you can hardcode the use of 'jot' instead
+# uuencode / decode this script when catting 
+# it around!
+
+declare -i ii=1 ARGN=$#
+
+function color {
+	local COLOR
+	case $1 in
+		RED)	COLOR=31 ;;
+		GREEN)	COLOR=32 ;;
+		YELLOW) COLOR=33 ;;
+		BLUE)	COLOR="1m[34" ;;
+		PURPLE)	COLOR=35 ;;
+		CYAN)	COLOR=36 ;;
+		WHITE)	COLOR="1" ;;
+		*)	COLOR=31 ;;
+	esac
+	echo $COLOR
+}
+
+function unknown_os {
+	echo "${0##/*/}: Unknown OS release. Fix da code." >&2
+	exit 1
+}
+
+# see which OS we're running on, sed does differ a 'bit' or two
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+case ${OS} in
+	linux) 	SEQ=`which seq` ;;
+	darwin) SEQ=`which gseq` ;;
+	*)	unknown_os ;;
+esac
+
+# see if our terminal supports colors...
+ncolors=$(tput colors)
+if test -n "$ncolors" && test $ncolors -ge 8; then
+	if [ $(( $#%2 )) -eq 1 ]; then
+		if [ "$1" == "-h" ]; then 		# assume help needed
+			echo "Usage: [1m${0##/*/}[0m RegEx [color] [RegEx color] [RegEx color] [... ...]" >&2
+			echo "       color can be in WHITE RED GREEN YELLOW BLUE PURPLE CYAN" | $0 WHITE WHITE RED RED GREEN GREEN YELLOW YELLOW BLUE BLUE PURPLE PURPLE CYAN CYAN >&2
+			echo "       default is RED. Order of RegEx is relevant." | $0 RED >&2
+			exit 1
+		else
+			ii=1
+			COLOR[ii]=31
+			ARG[ii]=$1
+		fi
+	else
+		for ii in `${SEQ} 1 2 $ARGN`; do
+			ARG[$ii]=$1
+			COLOR[$ii]=$(color $2)
+			shift 2
+		done
+	fi
+
+	for ii in `seq 1 2 $ARGN`; do
+		SED="-e s/\(${ARG[$ii]}\)/[${COLOR[$ii]}m\1[0m/g $SED" 
+	done
+
+	case ${OS} in
+		linux)	/bin/sed -u $SED - ;;
+		darwin) /usr/bin/sed $SED ;;
+		*) 	unknown_os ;;
+	esac
+else
+	# no color capabilities, just give a warning and output STDIN
+	echo "${0##/*/}: Warning: You need a color capable terminal for ${0##/*/} to work as expected!" >&2
+	case ${OS} in
+		linux)	/bin/sed -u -n -e 'p' -	;;
+		darwin)	/usr/bin/sed -n -e 'p' ;;
+                *)      unknown_os ;;
+ 	esac
+fi

@@ -1,0 +1,79 @@
+#! /bin/bash
+# $Id: sasl-auth-failures,v 1.15 2024/01/13 10:39:01 hippie Exp $
+# code is like poetry, if you have to explain it, it is bad
+# vim: set ts=4 sw=4 :
+
+KEEPDAYS=${1:-28}	# days to keep IPs in the list, default four weeks
+TRESHOLD=${2:-5}	# minimum failed auth attempts, default 5
+LIST_IPS='sasl-auth-failed'
+LIST_NET='sasl-auth-failed-nets'
+COUNTRIES='CN|RU|BR|IN|IQ|TW|DO|KR|EG|HK|SG|BD|VN|ID|DM|KE|PK|TN|NG|AG|IR|TJ|UA|LA|TR|US'
+IPSET_BIN='/usr/sbin/ipset'
+TIME=$( /bin/date "+%s")
+IFS='
+'
+
+echo '# make sure, we have our ipsets ready'
+IPSETS_EXIST=$( ${IPSET_BIN} list | grep -E "^create ")
+for NETS in '' '-nets'; do
+	for IP6 in '' '-ipv6'; do
+		if ! ${IPSET_BIN} list "sasl-auth-failed${NETS}${IP6}" >/dev/null 2>&1; then
+			if [ "${NETS}" == "-nets" ]; then TYPE='hash:net'; else TYPE='hash:ip'; fi
+			if [ "${IP6}" == "-ipv6" ]; then FAMILY='inet6'; else FAMILY='inet'; fi
+			echo "# ipset create sasl-auth-failed${NETS}${IP6} ${TYPE} family ${FAMILY} comment"
+			${IPSET_BIN} create sasl-auth-failed${NETS}${IP6} ${TYPE} family ${FAMILY} comment
+		fi
+	done
+done
+
+echo '# search logs'
+FAILURES=$(
+	grep 'SASL LOGIN authentication failed: authentication failure' /var/log/mail.log.1 | cut -d'[' -f3- | cut -d']' -f1 | sort | uniq -c 
+	grep -E "authentication failure" /var/log/auth.log.1 | awk '{print $16}' | cut -d'=' -f2 | uniq -c
+	)
+
+echo '# import newly found IP addresses'
+for LINE in ${FAILURES}; do
+	declare -i COUNT=$( echo ${LINE} | awk '{print $1}' | tr -d '[:space:]' )
+	IPAD=$( echo ${LINE} | awk '{print $2}' | tr -d '[:space:]' )
+	IP6=$( if echo ${IPAD} | grep -q ':'; then echo -n "-ipv6"; else echo -n ""; fi)
+	if ${IPSET_BIN} -q test ${LIST_NET}${IP6} ${IPAD}; then
+		# can't be theoretically ... but just to make sure we save expensive whois queries
+		continue
+	else
+		ASN=$( /usr/bin/whois -h whois.cymru.com " -v ${IPAD}" | tail -1)
+		ASN_COUNTRY=$( echo ${ASN} | awk '{print $7}')
+		ASN_COMMENT=$( echo ${ASN} | awk '{print $13}')
+		ASN_NET=$( echo ${ASN} | awk '{print $5}')
+
+		if echo ${ASN_COUNTRY} | grep -qE ${COUNTRIES}; then
+			echo "${IPSET_BIN} add ${LIST_NET}${IP6} --exist ${ASN_NET} --comment \"${ASN_COMMENT} (${ASN_COUNTRY})\""
+			${IPSET_BIN} add ${LIST_NET}${IP6} --exist ${ASN_NET} --comment "${ASN_COMMENT} (${ASN_COUNTRY})"
+			sleep 1
+		else
+			if [ ${COUNT} -gt 4 ] && [ ${COUNT} -le 100 ]; then
+				echo "${IPSET_BIN} add ${LIST_IPS}${IP6} --exist ${IPAD} --comment \"#${TIME} ${COUNT}/d ${ASN_COMMENT} (${ASN_COUNTRY})\""
+				${IPSET_BIN} add ${LIST_IPS}${IP6} --exist ${IPAD} --comment "#${TIME} ${COUNT}/d ${ASN_COMMENT} (${ASN_COUNTRY})"
+			fi
+			if [ ${COUNT} -gt 100 ]; then
+				echo "${IPSET_BIN} add ${LIST_IPS}${IP6} --exist ${IPAD} --comment \"* permanent ${COUNT}/d ${ASN_COMMENT} (${ASN_COUNTRY})\""
+				${IPSET_BIN} add ${LIST_IPS}${IP6} --exist ${IPAD} --comment "* permanent ${COUNT}/d ${ASN_COMMENT} (${ASN_COUNTRY})/d"
+			fi
+		fi
+	fi
+done
+
+echo '# clean older IP addresses out of the list'
+for IP6 in '' '-ipv6'; do
+	BEFORE=$( date "+%s" -d "${KEEPDAYS} days ago")
+	BLOCKLIST_IPS=$( ${IPSET_BIN} -s list ${LIST_IPS}${IP6} | grep 'comment "#' )
+	for LINE in ${BLOCKLIST_IPS}; do
+		declare -i TIMESTAMP=$( echo ${LINE} | cut -d'#' -f2 | cut -d' ' -f1 | tr -d '"')
+		IPAD=$( echo ${LINE} | cut -d' ' -f1)
+		if [ ${TIMESTAMP} -le ${BEFORE} ]; then
+			echo "${IPSET_BIN} del ${LIST_IPS}${IP6} ${IPAD}"
+			${IPSET_BIN} del ${LIST_IPS}${IP6} ${IPAD}
+		fi
+	done
+done
+echo '# done.'
