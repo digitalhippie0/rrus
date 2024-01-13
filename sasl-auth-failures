@@ -3,6 +3,23 @@
 # code is like poetry, if you have to explain it, it is bad
 # vim: set ts=4 sw=4 :
 
+# you will need some iptable/nftable rules for this to work, like this
+# 	iptables -A INPUT -m set --match-set sasl-auth-failed src -m comment --comment "too many sasl auth failures" -j DROP
+# 	iptables -A INPUT -m set --match-set sasl-auth-failed-nets src -m comment --comment "too many sasl auth failures" -j DROP
+# 	ip6tables -A INPUT -m set --match-set sasl-auth-failed-ipv6 src -m comment --comment "too many sasl auth failures" -j DROP
+# 	ip6tables -A INPUT -m set --match-set sasl-auth-failed-nets-ipv6 src -m comment --comment "too many sasl auth failures" -j DROP
+# although, the ipsets need to be created first. If you run the script once, it will add them for you.
+# It is recommended, you make your ipsets bootsafe somehow
+# The field "FAILURES=$( ..." defines the list of IPs/NETS you want to block. Its output needs to look like this:
+#      1 2.55.125.176
+#      1 2.57.219.2
+#      2 2a02:7a60:1::2ce
+#      1 41.79.189.122
+# the first number is a count, the second - obviously - an IP address, either IPv4 or IPv6
+# just make sure, you add log file analyzers that can create such output, line per line and off you go
+# COUNTRIES is a list of countries which are considered offending your security. If an IP address is from any of these, the whole ASN will be blocked right away.
+# use cron(5) to run the script once per day or whenever you rotate your log files
+
 KEEPDAYS=${1:-28}	# days to keep IPs in the list, default four weeks
 TRESHOLD=${2:-5}	# minimum failed auth attempts, default 5
 LIST_IPS='sasl-auth-failed'
