@@ -1,8 +1,9 @@
 #! /bin/bash
 # Wed Feb 12 10:50:50 UTC 2020; HH-RIPE; Henrik Harms
-# Sichert die Kernel IP-Sets nach Namen getrennt
 # $Id: ipset_saver,v 1.3 2023/12/19 10:09:11 hippie Exp $
 # vim: set nohlsearch ts=4 sw=4 :
+# saves ipsets separated by names
+# restore like this: cat /etc/ipsets/*.conf | /usr/sbin/ipset restore
 
 IPSET='/sbin/ipset'
 BASE='/etc/ipsets'
