@@ -1,0 +1,71 @@
+#! /bin/bash
+# Fri Mar 15 12:44:53 UTC 2019; harmsh
+# vim: set ts=4 sw=4 :
+
+umask 077
+SPAMDIR='/tmp/spamtrainer/spam'
+HAMDIR='/tmp/spamtrainer/ham'
+LOCKFILE='/tmp/spamtrainer/.lock'
+DAYS2KEEP=14
+DESTINATION='127.0.0.1'
+
+mkdir -p ${SPAMDIR}/new ${HAMDIR}/new
+mkdir -p ${SPAMDIR}/seen ${HAMDIR}/seen
+
+function filter {
+	while read LINE; do
+		echo ${LINE} | cut -d' ' -f2- | perl -pne 's/.*[< ]([a-z0-9.-]*@[a-z0-9.]*?)[>]/$1/;'
+	done
+}
+
+trap 'rm ${LOCKFILE}' QUIT KILL TERM EXIT
+if [ -e ${LOCKFILE} ]; then
+	exit 1
+else
+	touch ${LOCKFILE}
+	# process SPAM
+	DIRS=$(find /home/ -type d -iname "Junk")
+	for DIR in ${DIRS}; do
+		echo "${DIR}/cur"
+		#for FILE in $(find ${DIR}/cur -type f -iname "*,*S*"); do
+		for FILE in $(find ${DIR}/cur -type f ); do
+			echo "  ${FILE}"
+			mv ${FILE} ${SPAMDIR}/new/
+		done
+	done
+
+	echo "learning SPAM:"
+	for file in $(ls -1 ${SPAMDIR}/new/ ); do 
+		FROM=$( cat ${SPAMDIR}/new/${file} | grep -E "^From: " | filter )
+		TO=$( cat ${SPAMDIR}/new/${file} | grep -E "^To: " | filter )
+		echo "  ${SPAMDIR}/new/${file} from=${FROM} to=${TO}"
+		/usr/bin/logger --id=$$ -p syslog.info "reporting file=${SPAMDIR}/new/${file} from=${FROM} to=${TO} as SPAM"
+		cat ${SPAMDIR}/new/${file} | /usr/bin/spamc -L spam -d ${DESTINATION}
+		mv ${SPAMDIR}/new/${file} ${SPAMDIR}/seen/${file}
+		find ${SPAMDIR}/seen/ -type f -mtime ${DAYS2KEEP} -exec rm {} \;
+	done
+	echo "done with SPAM."
+
+	# process HAM
+	DIRS=$(find /home/ -type d -iname "ham")
+	for DIR in ${DIRS}; do
+		echo "${DIR}/cur"
+		#for FILE in $(find ${DIR}/cur -type f -iname "*,*S*"); do
+		for FILE in $(find ${DIR}/cur -type f ); do
+			echo "  ${FILE}"
+			mv ${FILE} ${HAMDIR}/new/
+		done
+	done
+
+	echo "learning HAM:"
+	for file in $(ls -1 ${HAMDIR}/new/); do 
+		FROM=$( cat ${HAMDIR}/new/${file} | grep -E "^From: " | filter )
+		TO=$( cat ${HAMDIR}/new/${file} | grep -E "^To: " | filter )
+		echo "  ${HAAMDIR}/new/${file} from=${FROM} to=${TO}"
+		/usr/bin/logger --id=$$ -p syslog.info "reporting file=${HAMDIR}/new/${file} from=${FROM} to=${TO} as HAM"
+		cat ${HAMDIR}/new/${file} | /usr/bin/spamc -L ham -d ${DESTINATION}
+		mv ${HAMDIR}/new/${file} ${HAMDIR}/seen/${file}
+		find ${HAMDIR}/seen/ -type f -mtime ${DAYS2KEEP} -exec rm {} \;
+	done
+	echo "done with HAM."
+fi
