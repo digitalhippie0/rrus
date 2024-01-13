@@ -1,7 +1,7 @@
 #!/bin/bash
 # $Id: beautify,v 1.2 2011/09/19 10:16:33 sfws Exp $
 #
-# unterdureckt leere Zeilen und Kommentarzeilen bei der Ausgabe
+# will suppress empty and comment lines, useful for these over-commented sample config files someone has been into
 
 REGEX='/^$/d;/^#/!p;'
 
