@@ -9,7 +9,7 @@
 # 	ip6tables -A INPUT -m set --match-set sasl-auth-failed-ipv6 src -m comment --comment "too many sasl auth failures" -j DROP
 # 	ip6tables -A INPUT -m set --match-set sasl-auth-failed-nets-ipv6 src -m comment --comment "too many sasl auth failures" -j DROP
 # although, the ipsets need to be created first. If you run the script once, it will add them for you.
-# It is recommended, you make your ipsets bootsafe somehow
+# It is recommended, you make your ipsets bootsafe somehow, see the ipset_saver script from the same repository
 # The field "FAILURES=$( ..." defines the list of IPs/NETS you want to block. Its output needs to look like this:
 #      1 2.55.125.176
 #      1 2.57.219.2
