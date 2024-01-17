@@ -67,11 +67,11 @@ for LINE in ${FAILURES}; do
 			${IPSET_BIN} add ${LIST_NET}${IP6} --exist ${ASN_NET} --comment "${ASN_COMMENT} (${ASN_COUNTRY})"
 			sleep 1
 		else
-			if [ ${COUNT} -gt 4 ] && [ ${COUNT} -le 100 ]; then
+			if [ ${COUNT} -ge ${TRESHOLD} ] && [ ${COUNT} -le $(( 4 * ${TRESHOLD})) ]; then
 				echo "${IPSET_BIN} add ${LIST_IPS}${IP6} --exist ${IPAD} --comment \"#${TIME} ${COUNT}/d ${ASN_COMMENT} (${ASN_COUNTRY})\""
 				${IPSET_BIN} add ${LIST_IPS}${IP6} --exist ${IPAD} --comment "#${TIME} ${COUNT}/d ${ASN_COMMENT} (${ASN_COUNTRY})"
 			fi
-			if [ ${COUNT} -gt 100 ]; then
+			if [ ${COUNT} -gt $(( 4 * ${TRESHOLD})) ]; then
 				echo "${IPSET_BIN} add ${LIST_IPS}${IP6} --exist ${IPAD} --comment \"* permanent ${COUNT}/d ${ASN_COMMENT} (${ASN_COUNTRY})\""
 				${IPSET_BIN} add ${LIST_IPS}${IP6} --exist ${IPAD} --comment "* permanent ${COUNT}/d ${ASN_COMMENT} (${ASN_COUNTRY})/d"
 			fi
