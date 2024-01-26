@@ -23,7 +23,7 @@ here's a few scripts I have written over the years:
 ```
 > same applies for IPv6:
 ```
-    -A INPUT -m ... -J ALLOW
+    -A INPUT -m ... -j ALLOW
     ...
     -A INPUT -m set --match-set by-syslog-ipv6 src -j DROP
     -A INPUT -m set --match-set by-syslog-nets-ipv6 src -j DROP
