@@ -1,0 +1,13 @@
+[Unit]
+Description=anti brute force daemon
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/sbin/ipset_blocker
+RestartSec=10
+Restart=always
+
+[Install]
+WantedBy=default.target
+
