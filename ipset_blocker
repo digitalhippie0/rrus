@@ -1,23 +1,27 @@
 #! /bin/bash 
-# $Id: ipset_blocker,v 1.5 2024/01/26 09:22:21 hippie Exp $
+# $Id: ipset_blocker,v 1.6 2024/02/02 08:57:33 hippie Exp $
 # code is like poetry, if you have to explain it, it is bad
 # vim: set ts=4 sw=4 :
 
-main () {
-	IPSET_BASE='by-syslog'
-	BLACKLIST='CN|RU|BR|IN|IQ|TW|DO|KR|EG|HK|SG|BD|VN|ID|DM|KE|PK|TN|NG|AG|IR|TJ|UA|LA|TR|AE|CA|KZ|US'
-	WHITELIST='AT|DE'
-	PIPE='/var/spool/rsyslog/ipset-blocker'
-	IPSET_BIN='/usr/sbin/ipset'
-	IFS='
-	'
+IPSET_BASE='by-syslog'
+BLACKLIST='CN|RU|BR|IN|IQ|TW|DO|KR|EG|HK|SG|BD|VN|ID|DM|KE|PK|TN|NG|AG|IR|TJ|UA|LA|TR|AE|CA|KZ|US'
+WHITELIST='AT|DE'
+PIPE='/var/spool/rsyslog/ipset-blocker'
+IPSET_BIN='/usr/sbin/ipset'
+IFS='
+'
+declare -i DEBUG=${DEBUG=0}
+umask 0077
 
+function setup {
 	trap '	echo "# exiting on signal."
 			exit 0
 		' EXIT INT QUIT ABRT HUP TERM
 
-	exec 1> >(/usr/bin/logger -p "syslog.info" -t $(basename $0)) 2>&1
-	umask 0077
+	if [ ${DEBUG} -gt 2 ]; then set -x; fi
+	if [ ${DEBUG} -lt 2 ]; then
+		exec 1> >(/usr/bin/logger -p "syslog.info" -t $(basename $0)) 2>&1
+	fi
 
 	echo '# make sure, we have our ipsets ready'
 	IPSETS_EXIST=$( ${IPSET_BIN} list | grep ${IPSET_BASE} | grep -E "^create " )
@@ -31,11 +35,13 @@ main () {
 			fi
 		done
 	done
+}
 
+function main {
 	while /bin/true; do
 		echo "# open listener on ${PIPE}"
 		while read LINE; do
-			UUID=$( cat /proc/sys/kernel/random/uuid)
+			if [ ${DEBUG} -ge 2 ]; then UUID='[ '$( cat /proc/sys/kernel/random/uuid)' ] '; else UUID=''; fi
 			TIME=$( /bin/date "+%s")
 			RAWIPAD=$( echo ${LINE} | perl -ne \
 				'	my $line = $_; chomp $line;
@@ -49,7 +55,7 @@ main () {
 				IP6=$( if echo ${RAWIPAD} | cut -d' ' -f1 | grep -q 'ipv6'; then echo '-ipv6'; else echo ''; fi)
 
 				if ${IPSET_BIN} -q test ${IPSET_BASE}${IP6} ${IPAD} || ${IPSET_BIN} -q test ${IPSET_BASE}-nets${IP6} ${IPAD}; then
-					echo "[${UUID}] ${IPSET_BIN} -q test ${IPSET_BASE}(-nets)${IP6} ${IPAD} <- this exists"
+					if [ ${DEBUG} -ge 1 ]; then echo "${UUID}${IPSET_BIN} -q test ${IPSET_BASE}(-nets)${IP6} ${IPAD} <- this exists"; fi
 				else
 					ASN=$( /usr/bin/whois -h whois.cymru.com " -v ${IPAD}" | tail -1)
 					ASN_COUNTRY=$( echo ${ASN} | awk '{print $7}')
@@ -57,17 +63,17 @@ main () {
 					ASN_NET=$( echo ${ASN} | awk '{print $5}')
 
 					if echo ${ASN_COUNTRY} | grep -qE ${WHITELIST}; then
-						echo "[${UUID}] IP ${IPAD} (${ASN_COMMENT} (${ASN_COUNTRY})) is whitelisted."
+						echo "${UUID}IP ${IPAD} (${ASN_COMMENT} (${ASN_COUNTRY})) is whitelisted."
 					else
 						if echo ${ASN_COUNTRY} | grep -qE ${BLACKLIST}; then
 							if [ "${ASN_NET}" == "NA" ]; then
 								if [ "${IP6}" != '' ]; then ASN_NET="${IPAD}/128"; else ASN_NET="${IPAD}/32"; fi
-								echo "[${UUID}] could not find an ASN for ${IPAD} (${ASN_COUNTRY}), adding it as ${ASN_NET}"
+								echo "${UUID}could not find an ASN for ${IPAD} (${ASN_COUNTRY}), adding it as ${ASN_NET}"
 							fi
-							echo "[${UUID}] ${IPSET_BIN} add ${IPSET_BASE}-nets${IP6} --exist ${ASN_NET} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
+							echo "${UUID}${IPSET_BIN} add ${IPSET_BASE}-nets${IP6} --exist ${ASN_NET} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
 							${IPSET_BIN} add ${IPSET_BASE}-nets${IP6} --exist ${ASN_NET} --comment "#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})"
 						else
-							echo "[${UUID}] ${IPSET_BIN} add ${IPSET_BASE}${IP6} --exist ${IPAD} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
+							echo "${UUID}${IPSET_BIN} add ${IPSET_BASE}${IP6} --exist ${IPAD} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
 							${IPSET_BIN} add ${IPSET_BASE}${IP6} --exist ${IPAD} --comment "#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})"
 						fi
 					fi
@@ -79,4 +85,5 @@ main () {
 	done
 }
 
+setup
 main
