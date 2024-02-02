@@ -1,5 +1,5 @@
 #! /bin/bash 
-# $Id: ipset_blocker,v 1.6 2024/02/02 08:57:33 hippie Exp $
+# $Id: ipset_blocker,v 1.7 2024/02/02 09:55:02 hippie Exp $
 # code is like poetry, if you have to explain it, it is bad
 # vim: set ts=4 sw=4 :
 
@@ -41,7 +41,7 @@ function main {
 	while /bin/true; do
 		echo "# open listener on ${PIPE}"
 		while read LINE; do
-			if [ ${DEBUG} -ge 2 ]; then UUID='[ '$( cat /proc/sys/kernel/random/uuid)' ] '; else UUID=''; fi
+			if [ ${DEBUG} -ge 2 ]; then UUID='['; UUID+=$( cat /proc/sys/kernel/random/uuid);UUID+='] '; else UUID=''; fi
 			TIME=$( /bin/date "+%s")
 			RAWIPAD=$( echo ${LINE} | perl -ne \
 				'	my $line = $_; chomp $line;
@@ -49,13 +49,13 @@ function main {
 					use Regexp::IPv6 qw($IPv6_re); $line =~ s/.*?($IPv6_re).*/$1/ and print( "ipv6 $line");
 				')
 			if [ "${RAWIPAD}" == "" ]; then
-				echo "[${UUID}] parse error: ${LINE}"
+				echo "${UUID}parse error: ${LINE}"
 			else
 				IPAD=$( echo ${RAWIPAD} | cut -d' ' -f2)
 				IP6=$( if echo ${RAWIPAD} | cut -d' ' -f1 | grep -q 'ipv6'; then echo '-ipv6'; else echo ''; fi)
 
 				if ${IPSET_BIN} -q test ${IPSET_BASE}${IP6} ${IPAD} || ${IPSET_BIN} -q test ${IPSET_BASE}-nets${IP6} ${IPAD}; then
-					if [ ${DEBUG} -ge 1 ]; then echo "${UUID}${IPSET_BIN} -q test ${IPSET_BASE}(-nets)${IP6} ${IPAD} <- this exists"; fi
+					if [ ${DEBUG} -ge 1 ]; then echo "${UUID}${IPSET_BIN##*/} -q test ${IPSET_BASE}(-nets)${IP6} ${IPAD} <- this exists"; fi
 				else
 					ASN=$( /usr/bin/whois -h whois.cymru.com " -v ${IPAD}" | tail -1)
 					ASN_COUNTRY=$( echo ${ASN} | awk '{print $7}')
@@ -70,10 +70,10 @@ function main {
 								if [ "${IP6}" != '' ]; then ASN_NET="${IPAD}/128"; else ASN_NET="${IPAD}/32"; fi
 								echo "${UUID}could not find an ASN for ${IPAD} (${ASN_COUNTRY}), adding it as ${ASN_NET}"
 							fi
-							echo "${UUID}${IPSET_BIN} add ${IPSET_BASE}-nets${IP6} --exist ${ASN_NET} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
+							echo "${UUID}${IPSET_BIN##*/} add ${IPSET_BASE}-nets${IP6} --exist ${ASN_NET} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
 							${IPSET_BIN} add ${IPSET_BASE}-nets${IP6} --exist ${ASN_NET} --comment "#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})"
 						else
-							echo "${UUID}${IPSET_BIN} add ${IPSET_BASE}${IP6} --exist ${IPAD} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
+							echo "${UUID}${IPSET_BIN##*/} add ${IPSET_BASE}${IP6} --exist ${IPAD} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
 							${IPSET_BIN} add ${IPSET_BASE}${IP6} --exist ${IPAD} --comment "#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})"
 						fi
 					fi
