@@ -70,10 +70,10 @@ function main {
 								if [ "${IP6}" != '' ]; then ASN_NET="${IPAD}/128"; else ASN_NET="${IPAD}/32"; fi
 								echo "${UUID}could not find an ASN for ${IPAD} (${ASN_COUNTRY}), adding it as ${ASN_NET}"
 							fi
-							echo "${UUID}${IPSET_BIN##*/} add ${IPSET_BASE}-nets${IP6} --exist ${ASN_NET} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
+							echo "${UUID}${IPSET_BIN##*/} add ${IPSET_BASE}-nets${IP6} ${ASN_NET} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
 							${IPSET_BIN} add ${IPSET_BASE}-nets${IP6} --exist ${ASN_NET} --comment "#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})"
 						else
-							echo "${UUID}${IPSET_BIN##*/} add ${IPSET_BASE}${IP6} --exist ${IPAD} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
+							echo "${UUID}${IPSET_BIN##*/} add ${IPSET_BASE}${IP6} ${IPAD} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
 							${IPSET_BIN} add ${IPSET_BASE}${IP6} --exist ${IPAD} --comment "#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})"
 						fi
 					fi
