@@ -8,6 +8,7 @@ BLACKLIST=${BLACKLIST=CN|RU|BR|IN|IQ|TW|DO|KR|EG|HK|SG|BD|VN|ID|DM|KE|PK|TN|NG|A
 WHITELIST=${WHITELIST=AT|DE}
 PIPE=${PIPE=/var/spool/rsyslog/ipset-blocker}
 IPSET_BIN=${IPSET_BIN=/usr/sbin/ipset}
+LOGGER_BIN=${IPSET_BIN=/usr/bin/logger}
 TIMEOUT=${TIMEOUT=2073600}
 IFS='
 '
@@ -21,7 +22,7 @@ function setup {
 
 	if [ ${DEBUG} -gt 2 ]; then set -x; fi
 	if [ ${DEBUG} -lt 2 ]; then
-		exec 1> >(/usr/bin/logger -p "syslog.info" -t $(basename $0)) 2>&1
+		exec 1> >( ${LOGGER_BIN} -p "syslog.info" -t $(basename $0)) 2>&1
 	fi
 
 	echo '# $Id: ipset_blocker,v 1.11 2024/02/03 12:19:05 hippie Exp $ starting up'

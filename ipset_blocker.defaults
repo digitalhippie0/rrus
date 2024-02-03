@@ -1,4 +1,4 @@
-# default environment for ipset_blocker
+# default environment for ipset_blocker.service
 
 # the name base for our ipsets, can be any name ipset allows us to use
 IPSET_BASE='by-syslog'
@@ -19,8 +19,9 @@ WHITELIST='AT|DE'
 # reopen the listener and log the event.
 PIPE='/var/spool/rsyslog/ipset-blocker'
 
-# the true location of your ipset binary, might differ for other distributions
+# the true locations of your ipset and logger binaries, these might differ for other distributions
 IPSET_BIN='/usr/sbin/ipset'
+LOGGER_BIN='/usr/bin/logger'
 
 # the debug level, expressed as an integer.
 #	0 - regular shortened messages to the syslog
@@ -28,7 +29,7 @@ IPSET_BIN='/usr/sbin/ipset'
 #	2 - verbose logging to the console (no syslog spawn), each input line is annotated with an UUID
 #	3++ very verbose logging to the console. will 'set -x' so you can really see what happens
 # you might want to debug like 
-# DEBUG=2 /some/path/ipset_blocker
+# DEBUG=2 TIMEOUT='600' /some/path/ipset_blocker
 DEBUG=0
 
 # timeout for new entires, the default is 24 days aka 2073600 secs
