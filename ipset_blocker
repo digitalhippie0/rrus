@@ -1,5 +1,5 @@
 #! /bin/bash 
-# $Id: ipset_blocker,v 1.12 2024/02/03 12:37:38 hippie Exp $
+# $Id: ipset_blocker,v 1.14 2024/02/03 12:52:06 hippie Exp $
 # code is like poetry, if you have to explain it, it is bad
 # vim: set ts=4 sw=4 :
 
@@ -8,7 +8,7 @@ BLACKLIST=${BLACKLIST=CN|RU|BR|IN|IQ|TW|DO|KR|EG|HK|SG|BD|VN|ID|DM|KE|PK|TN|NG|A
 WHITELIST=${WHITELIST=AT|DE}
 PIPE=${PIPE=/var/spool/rsyslog/ipset-blocker}
 IPSET_BIN=${IPSET_BIN=/usr/sbin/ipset}
-LOGGER_BIN=${IPSET_BIN=/usr/bin/logger}
+LOGGER_BIN=${LOGGER_BIN=/usr/bin/logger}
 TIMEOUT=${TIMEOUT=2073600}
 IFS='
 '
@@ -26,7 +26,7 @@ function setup {
 	fi
 
 	sleep 1 
-	echo '# $Id: ipset_blocker,v 1.12 2024/02/03 12:37:38 hippie Exp $ starting up'
+	echo '# $Id: ipset_blocker,v 1.14 2024/02/03 12:52:06 hippie Exp $ starting up'
 	echo '# make sure, we have our ipsets ready'
 	IPSETS_EXIST=$( ${IPSET_BIN} list | grep ${IPSET_BASE} | grep -E "^create " )
 	for NETS in '' '-nets'; do
@@ -74,11 +74,11 @@ function main {
 								if [ "${IP6}" != '' ]; then ASN_NET="${IPAD}/128"; else ASN_NET="${IPAD}/32"; fi
 								echo "${UUID}could not find an ASN for ${IPAD} (${ASN_COUNTRY}), adding it as ${ASN_NET}"
 							fi
-							echo "${UUID}${IPSET_BIN##*/} add ${IPSET_BASE}-nets${IP6} ${ASN_NET} timeout ${TIMEOUT} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
-							${IPSET_BIN} add ${IPSET_BASE}-nets${IP6} --exist ${ASN_NET} timeout ${TIMEOUT} --comment "#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})"
+							echo "${UUID}${IPSET_BIN##*/} add ${IPSET_BASE}-nets${IP6} ${ASN_NET} timeout ${TIMEOUT} comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
+							${IPSET_BIN} add ${IPSET_BASE}-nets${IP6} --exist ${ASN_NET} timeout ${TIMEOUT} comment "#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})"
 						else
-							echo "${UUID}${IPSET_BIN##*/} add ${IPSET_BASE}${IP6} ${IPAD} timeout ${TIMEOUT} --comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
-							${IPSET_BIN} add ${IPSET_BASE}${IP6} --exist ${IPAD} timeout ${TIMEOUT} --comment "#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})"
+							echo "${UUID}${IPSET_BIN##*/} add ${IPSET_BASE}${IP6} ${IPAD} timeout ${TIMEOUT} comment \"#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})\""
+							${IPSET_BIN} add ${IPSET_BASE}${IP6} --exist ${IPAD} timeout ${TIMEOUT} comment "#${TIME} (${IPSET_BASE}) ${ASN_COMMENT} (${ASN_COUNTRY})"
 						fi
 					fi
 				fi
