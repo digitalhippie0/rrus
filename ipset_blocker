@@ -1,5 +1,5 @@
 #! /bin/bash 
-# $Id: ipset_blocker,v 1.14 2024/02/03 12:52:06 hippie Exp $
+# $Id: ipset_blocker,v 1.15 2024/02/05 10:29:33 hippie Exp $
 # code is like poetry, if you have to explain it, it is bad
 # vim: set ts=4 sw=4 :
 
@@ -9,16 +9,47 @@ WHITELIST=${WHITELIST=AT|DE}
 PIPE=${PIPE=/var/spool/rsyslog/ipset-blocker}
 IPSET_BIN=${IPSET_BIN=/usr/sbin/ipset}
 LOGGER_BIN=${LOGGER_BIN=/usr/bin/logger}
+BC_BIN=${BC_BIN=/usr/bin/bc}
 TIMEOUT=${TIMEOUT=2073600}
 IFS='
 '
 declare -i DEBUG=${DEBUG=0}
 umask 0077
 
+function statistics {
+	declare -i VERSION=$( echo $BASH_VERSION | cut -d'.' -f1)
+	if [ ${VERSION} -ge 4 ]; then
+		echo "# statistics dump triggered"
+		RAWSTATS=$( ${IPSET_BIN} save ${IPSET_BASE}-nets | perl -pne 's/.*?\/(\d{1,2}).*\((..)\)"$/$1 $2/' | grep -v "${IPSET_BASE}" | sort -k2 | uniq -c)
+		declare -i TOTALHOSTS=0
+		declare -i THE_INTERNET=$(( 2**32 ))
+		declare -A STATISTICS
+		for LINE in ${RAWSTATS}; do
+			declare -i COUNT=$( echo ${LINE} | awk '{print $1}')
+			declare -i MASK=$( echo ${LINE} | awk '{print $2}')
+			CC=$( echo ${LINE} | awk '{print $3}')
+			declare -i HOST_COUNT=$(( ${COUNT} * ( 2 ** ( 32 - ${MASK} )) ))
+			STATISTICS[${CC}]=$(( ${STATISTICS[${CC}]} + ${HOST_COUNT} ))
+			TOTALHOSTS=$(( ${TOTALHOSTS} + ${HOST_COUNT} ))
+		done
+		for COUNTRY in $( echo ${!STATISTICS[@]} | tr ' ' '\n' | sort); do
+			PERCENTAGE=$( printf '%3.2f' $(echo "scale=2;( ${STATISTICS[${COUNTRY}]} * 100 ) / ${TOTALHOSTS}" | ${BC_BIN} ))
+			echo "## blocking ${STATISTICS[${COUNTRY}]} hosts from ${COUNTRY} (${PERCENTAGE}% of all blocked hosts)"
+		done
+			PERCENTAGE=$( printf '%3.2f' $(echo "scale=2;( ${TOTALHOSTS} * 100 ) / ${THE_INTERNET}" | ${BC_BIN} ))
+		echo "## these are ${TOTALHOSTS} hosts/IPs which is ${PERCENTAGE}% of the IPv4 internet"
+		echo "# resuming normal operation"
+	else
+		echo "# statistics unavailable. Upgrade to bash version 4 or above."
+	fi
+}
+
 function setup {
 	trap '	echo "# exiting on signal."
 			exit 0
-		' EXIT INT QUIT ABRT HUP TERM
+		' EXIT INT QUIT ABRT TERM
+	trap '	statistics
+		' HUP USR1
 
 	if [ ${DEBUG} -gt 2 ]; then set -x; fi
 	if [ ${DEBUG} -lt 2 ]; then
@@ -26,7 +57,7 @@ function setup {
 	fi
 
 	sleep 1 
-	echo '# $Id: ipset_blocker,v 1.14 2024/02/03 12:52:06 hippie Exp $ starting up'
+	echo '# $Id: ipset_blocker,v 1.15 2024/02/05 10:29:33 hippie Exp $ starting up'
 	echo '# make sure, we have our ipsets ready'
 	IPSETS_EXIST=$( ${IPSET_BIN} list | grep ${IPSET_BASE} | grep -E "^create " )
 	for NETS in '' '-nets'; do
