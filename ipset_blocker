@@ -1,5 +1,5 @@
 #! /bin/bash 
-# $Id: ipset_blocker,v 1.17 2024/02/05 10:55:53 hippie Exp $
+# $Id: ipset_blocker,v 1.18 2024/02/05 11:00:12 hippie Exp $
 # code is like poetry, if you have to explain it, it is bad
 # vim: set ts=4 sw=4 :
 
@@ -42,7 +42,6 @@ function statistics {
 		done
 			PERCENTAGE=$( printf '%3.2f' $(echo "scale=2;( ${TOTALHOSTS} * 100 ) / ${THE_INTERNET}" | ${BC_BIN} ))
 		echo "## these are ${TOTALHOSTS} hosts/IPs which is ${PERCENTAGE}% of the complete IPv4 internet"
-		echo "# resuming normal operation"
 	else
 		echo "# statistics unavailable. Upgrade to bash version 4 or above."
 	fi
@@ -55,6 +54,7 @@ function setup {
 			exit 0
 		' EXIT INT QUIT ABRT TERM
 	trap '	statistics
+			echo "# resuming normal operation"
 		' HUP USR1
 
 	if [ ${DEBUG} -gt 2 ]; then set -x; fi
@@ -63,7 +63,7 @@ function setup {
 	fi
 
 	sleep 1 
-	echo '# $Id: ipset_blocker,v 1.17 2024/02/05 10:55:53 hippie Exp $ starting up'
+	echo '# $Id: ipset_blocker,v 1.18 2024/02/05 11:00:12 hippie Exp $ starting up'
 	echo '# make sure, we have our ipsets ready'
 	IPSETS_EXIST=$( ${IPSET_BIN} list | grep ${IPSET_BASE} | grep -E "^create " )
 	for NETS in '' '-nets'; do
