@@ -1,5 +1,5 @@
 #! /bin/bash 
-# $Id: ipset_blocker,v 1.15 2024/02/05 10:29:33 hippie Exp $
+# $Id: ipset_blocker,v 1.16 2024/02/05 10:49:32 hippie Exp $
 # code is like poetry, if you have to explain it, it is bad
 # vim: set ts=4 sw=4 :
 
@@ -34,10 +34,14 @@ function statistics {
 		done
 		for COUNTRY in $( echo ${!STATISTICS[@]} | tr ' ' '\n' | sort); do
 			PERCENTAGE=$( printf '%3.2f' $(echo "scale=2;( ${STATISTICS[${COUNTRY}]} * 100 ) / ${TOTALHOSTS}" | ${BC_BIN} ))
-			echo "## blocking ${STATISTICS[${COUNTRY}]} hosts from ${COUNTRY} (${PERCENTAGE}% of all blocked hosts)"
+			echo -n "## blocking"
+			echo -n $( printf '%11d' ${STATISTICS[${COUNTRY}]})
+			echo -n " hosts from ${COUNTRY} ("
+			echo -n $( printf '%5s' ${PERCENTAGE})
+			echo "% of all blocked hosts)"
 		done
 			PERCENTAGE=$( printf '%3.2f' $(echo "scale=2;( ${TOTALHOSTS} * 100 ) / ${THE_INTERNET}" | ${BC_BIN} ))
-		echo "## these are ${TOTALHOSTS} hosts/IPs which is ${PERCENTAGE}% of the IPv4 internet"
+		echo "## these are ${TOTALHOSTS} hosts/IPs which is ${PERCENTAGE}% of the complete IPv4 internet"
 		echo "# resuming normal operation"
 	else
 		echo "# statistics unavailable. Upgrade to bash version 4 or above."
@@ -57,7 +61,7 @@ function setup {
 	fi
 
 	sleep 1 
-	echo '# $Id: ipset_blocker,v 1.15 2024/02/05 10:29:33 hippie Exp $ starting up'
+	echo '# $Id: ipset_blocker,v 1.16 2024/02/05 10:49:32 hippie Exp $ starting up'
 	echo '# make sure, we have our ipsets ready'
 	IPSETS_EXIST=$( ${IPSET_BIN} list | grep ${IPSET_BASE} | grep -E "^create " )
 	for NETS in '' '-nets'; do
