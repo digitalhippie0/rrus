@@ -37,3 +37,7 @@ DEBUG=0
 
 # timeout for new entires, the default is 24 days aka 2073600 secs
 TIMEOUT='2073600'
+
+# reset hit statistics by reinserting the rules with zero counters on statistics dump? 
+# must be 'off' to NOT reset them. defauls to 'off' but should be 'on' for production systems
+RESETSTATS='on'
