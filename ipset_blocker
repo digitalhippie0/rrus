@@ -1,5 +1,5 @@
 #! /bin/bash 
-# $Id: ipset_blocker,v 1.23 2024/02/07 12:08:39 hippie Exp $
+# $Id: ipset_blocker,v 1.25 2024/02/07 12:15:49 hippie Exp $
 # code is like poetry, if you have to explain it, it is bad
 # vim: set ts=4 sw=4 :
 
@@ -54,12 +54,12 @@ function statistics {
 					NET_OR_IP=$( echo ${LINE} | cut -d' ' -f3)
 					TIMEOUT=$( echo ${LINE} | cut -d' ' -f5)
 					PACKETS=$( echo ${LINE} | cut -d' ' -f7)
-					COMMENT=$( echo ${LINE} | cut -d' ' -f11-)
+					COMMENT=$( echo ${LINE} | cut -d'"' -f2)
 					CC=$( echo ${LINE} | perl -pne 's/.*\((.*)?\)"$/$1/')
 					STATISTICS[${CC}]=$(( ${STATISTICS[${CC}]} + ${PACKETS} ))
 					TOTALPACKETS=$(( ${TOTALPACKETS} + ${PACKETS} ))
 					if [ ! "${RESETSTATS}" == "off" ]; then
-						${IPSET_BIN} --exist add ${IPSET_BASE}${NETS}${IP6} ${NET_OR_IP} timeout ${TIMEOUT} packets 0 bytes 0 comment ${COMMENT}
+						${IPSET_BIN} --exist add ${IPSET_BASE}${NETS}${IP6} ${NET_OR_IP} timeout ${TIMEOUT} packets 0 bytes 0 comment "${COMMENT}"
 					fi
 				done
 			done
@@ -91,7 +91,7 @@ function setup {
 	fi
 
 	sleep 1 
-	echo '# $Id: ipset_blocker,v 1.23 2024/02/07 12:08:39 hippie Exp $ starting up'
+	echo '# $Id: ipset_blocker,v 1.25 2024/02/07 12:15:49 hippie Exp $ starting up'
 	echo '# make sure, we have our ipsets ready'
 	IPSETS_EXIST=$( ${IPSET_BIN} list | grep ${IPSET_BASE} | grep -E "^create " )
 	for NETS in '' '-nets'; do
